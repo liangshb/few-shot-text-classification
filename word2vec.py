@@ -4,7 +4,7 @@ import pickle
 import random
 import torch
 import numpy as np
-import configparser
+from omegaconf import OmegaConf
 
 
 def get_texts(train_loader, vocabulary):
@@ -27,6 +27,8 @@ def get_weights(model, vocabulary, embed_dim):
     for i in range(len(vocabulary)):
         if vocabulary.to_word(i) == '<pad>':
             continue
+        if vocabulary.to_word(i) == '<unk>':
+            continue
         weights[i] = model.wv[vocabulary.to_word(i)]
     return weights
 
@@ -45,8 +47,7 @@ def main():
 
 
 if __name__ == '__main__':
-    config = configparser.ConfigParser()
-    config.read('config.ini')
+    config = OmegaConf.load("sysevr_config.yaml")
 
     # seed
     seed = int(config['data']['seed'])

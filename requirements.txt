@@ -1,5 +1,8 @@
-numpy==1.16.2
 fastNLP==0.4.1
 gensim==3.8.0
 tensorboardX==1.8
-torch==1.1.0.post2
+torch==1.1.0
+
+numpy~=1.19.5
+omegaconf~=2.1.1
+datasets~=1.18.3

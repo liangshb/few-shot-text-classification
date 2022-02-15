@@ -1,4 +1,4 @@
-import configparser
+from omegaconf import OmegaConf
 import pickle
 import os
 import torch
@@ -87,8 +87,7 @@ def main():
 
 if __name__ == "__main__":
     # config
-    config = configparser.ConfigParser()
-    config.read("config.ini")
+    config = OmegaConf.load("sysevr_config.yaml")
 
     # seed
     seed = int(config['model']['seed'])
