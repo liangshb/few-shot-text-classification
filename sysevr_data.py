@@ -108,10 +108,10 @@ def random_select(domain, support):
     pos_indices = list(range(len(domain['pos']['data'])))
     neg_selected_indices = sample(neg_indices, support)
     pos_selected_indices = sample(pos_indices, support)
-    neg_support_data = [domain['neg']['data'][index] for index in neg_selected_indices]
-    pos_support_data = [domain['pos']['data'][index] for index in pos_selected_indices]
-    neg_support_target = [domain['neg']['target'][index] for index in neg_selected_indices]
-    pos_support_target = [domain['pos']['target'][index] for index in pos_selected_indices]
+    neg_support_data = [domain['neg']['data'].pop(index) for index in neg_selected_indices]
+    pos_support_data = [domain['pos']['data'].pop(index) for index in pos_selected_indices]
+    neg_support_target = [domain['neg']['target'].pop(index) for index in neg_selected_indices]
+    pos_support_target = [domain['pos']['target'].pop(index) for index in pos_selected_indices]
     return neg_support_data + pos_support_data, neg_support_target + pos_support_target
 
 

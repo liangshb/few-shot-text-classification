@@ -3,6 +3,10 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 
+def get_model(conf):
+    pass
+
+
 class Encoder(nn.Module):
     def __init__(self, num_classes, num_support_per_class,
                  vocab_size, embed_size, hidden_size,
@@ -99,6 +103,75 @@ class FewShotInduction(nn.Module):
 
     def forward(self, x):
         support_encoder, query_encoder = self.encoder(x)  # (k*c, 2*hidden_size)
+        class_vector = self.induction(support_encoder)
+        probs = self.relation(class_vector, query_encoder)
+        return probs
+
+
+class CNNEncoder(nn.Module):
+    def __init__(self,
+                 num_classes,
+                 num_support_per_class,
+                 vocab_size,
+                 embed_size,
+                 num_filters,
+                 kernel_sizes,
+                 dropout,
+                 hidden_size,
+                 weights
+                 ):
+        super().__init__()
+        self.num_support = num_classes * num_support_per_class
+        self.embedding = nn.Embedding(
+            vocab_size,
+            embed_size,
+            padding_idx=0
+        )
+        if weights is not None:
+            self.embedding.weight.data.copy_(torch.from_numpy(weights))
+        self.conv = nn.ModuleList(
+            [
+                nn.Conv1d(
+                    in_channels=embed_size,
+                    out_channels=num_filters,
+                    kernel_size=k,
+                )
+                for k in kernel_sizes
+            ]
+        )
+        self.dropout = nn.Dropout(dropout)
+        self.fc = nn.Linear(
+            len(kernel_sizes) * num_filters, hidden_size
+        )
+
+    def forward(self, x):
+        x = self.embedding(x).transpose(1, 2)
+        x = [F.relu(conv(x)) for conv in self.conv]
+        x = [F.max_pool1d(c, c.size(-1)).squeeze(dim=-1) for c in x]
+        x = torch.cat(x, dim=1)
+        logits = self.fc(self.dropout(x))
+        support, query = logits[0: self.num_support], logits[self.num_support:]
+        return support, query
+
+
+class FewShotInductionCNN(nn.Module):
+    def __init__(self, C, S, vocab_size, embed_size,
+                 num_filters,
+                 kernel_sizes,
+                 dropout,
+                 hidden_size,
+                 iterations, outsize, weights=None):
+        super(FewShotInductionCNN, self).__init__()
+        self.encoder = CNNEncoder(C, S, vocab_size, embed_size,
+                                  num_filters,
+                                  kernel_sizes,
+                                  dropout,
+                                  hidden_size, weights)
+        self.induction = Induction(C, S, hidden_size, iterations)
+        self.relation = Relation(C, hidden_size, outsize)
+
+    def forward(self, x):
+        support_encoder, query_encoder = self.encoder(x)  # (k*c, hidden_size)
         class_vector = self.induction(support_encoder)
         probs = self.relation(class_vector, query_encoder)
         return probs

@@ -9,6 +9,8 @@ from model import FewShotInduction
 from criterion import Criterion
 from tensorboardX import SummaryWriter
 
+from tqdm import tqdm
+
 
 def train(episode):
     model.train()
@@ -31,7 +33,7 @@ def dev(episode):
     model.eval()
     correct = 0.
     count = 0.
-    for data, target in dev_loader:
+    for data, target in tqdm(dev_loader):
         data = data.to(device)
         target = target.to(device)
         predict = model(data)
@@ -49,7 +51,7 @@ def test():
     model.eval()
     correct = 0.
     count = 0.
-    for data, target in test_loader:
+    for data, target in tqdm(test_loader):
         data = data.to(device)
         target = target.to(device)
         predict = model(data)
