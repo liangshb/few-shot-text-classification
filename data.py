@@ -146,8 +146,10 @@ def get_train_loader(train_data, support, query, pad_idx):
     batch_size = support + query
     train_loaders = {}
     for filename in train_data:
-        neg_dl = DataLoader(Dataset(train_data[filename]['neg'], pad_idx), batch_size=batch_size, shuffle=True, drop_last=False, **kwargs)
-        pos_dl = DataLoader(Dataset(train_data[filename]['pos'], pad_idx), batch_size=batch_size, shuffle=True, drop_last=False, **kwargs)
+        neg_dl = DataLoader(Dataset(train_data[filename]['neg'], pad_idx), batch_size=batch_size, shuffle=True,
+                            drop_last=False, **kwargs)
+        pos_dl = DataLoader(Dataset(train_data[filename]['pos'], pad_idx), batch_size=batch_size, shuffle=True,
+                            drop_last=False, **kwargs)
         if min(len(neg_dl), len(pos_dl)) > 0:
             train_loaders[filename] = {
                 'neg': neg_dl,
@@ -161,13 +163,17 @@ def get_test_loader(full_data, support, query, pad_idx):
     loader = []
     for filename in full_data:
         # support
-        support_data = full_data[filename]['neg']['support_data'][0:support] + full_data[filename]['pos']['support_data'][0:support]
+        support_data = full_data[filename]['neg']['support_data'][0:support] + full_data[filename]['pos'][
+                                                                                   'support_data'][0:support]
         support_data = batch_padding(support_data, pad_idx)
-        support_target = full_data[filename]['neg']['support_target'][0:support] + full_data[filename]['pos']['support_target'][0:support]
+        support_target = full_data[filename]['neg']['support_target'][0:support] + full_data[filename]['pos'][
+                                                                                       'support_target'][0:support]
         support_target = torch.tensor(support_target)
         # query
-        neg_dl = DataLoader(Dataset(full_data[filename]['neg'], pad_idx), batch_size=query * 2, shuffle=False, drop_last=False, **kwargs)
-        pos_dl = DataLoader(Dataset(full_data[filename]['pos'], pad_idx), batch_size=query * 2, shuffle=False, drop_last=False, **kwargs)
+        neg_dl = DataLoader(Dataset(full_data[filename]['neg'], pad_idx), batch_size=query * 2, shuffle=False,
+                            drop_last=False, **kwargs)
+        pos_dl = DataLoader(Dataset(full_data[filename]['pos'], pad_idx), batch_size=query * 2, shuffle=False,
+                            drop_last=False, **kwargs)
         # combine
         for dl in [neg_dl, pos_dl]:
             for batch_data, batch_target in dl:
@@ -203,7 +209,7 @@ def main():
     train_loader = get_train_loader(train_data, support, query, pad_idx)
     dev_loader = get_test_loader(dev_data, support, query, pad_idx)
     test_loader = get_test_loader(test_data, support, query, pad_idx)
-    
+
     pickle.dump(train_loader, open(os.path.join(config['data']['path'], config['data']['train_loader']), 'wb'))
     pickle.dump(dev_loader, open(os.path.join(config['data']['path'], config['data']['dev_loader']), 'wb'))
     pickle.dump(test_loader, open(os.path.join(config['data']['path'], config['data']['test_loader']), 'wb'))

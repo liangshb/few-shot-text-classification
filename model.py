@@ -3,10 +3,6 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 
-def get_model(conf):
-    pass
-
-
 class Encoder(nn.Module):
     def __init__(self, num_classes, num_support_per_class,
                  vocab_size, embed_size, hidden_size,
@@ -33,6 +29,9 @@ class Encoder(nn.Module):
         sentence_embeddings = torch.bmm(weights, x)  # (batch=k*c, d_a, 2*hidden)
         avg_sentence_embeddings = torch.mean(sentence_embeddings, dim=1)  # (batch, 2*hidden)
         return avg_sentence_embeddings
+
+    def get_output_dim(self):
+        return self.hidden_size * 2
 
     def forward(self, x, hidden=None):
         batch_size, _ = x.shape
@@ -94,12 +93,13 @@ class Relation(nn.Module):
 
 
 class FewShotInduction(nn.Module):
-    def __init__(self, C, S, vocab_size, embed_size, hidden_size, d_a,
-                 iterations, outsize, weights=None):
+    def __init__(self, C, S, encoder,
+                 iterations, outsize):
         super(FewShotInduction, self).__init__()
-        self.encoder = Encoder(C, S, vocab_size, embed_size, hidden_size, d_a, weights)
-        self.induction = Induction(C, S, 2 * hidden_size, iterations)
-        self.relation = Relation(C, 2 * hidden_size, outsize)
+        self.encoder = encoder
+        encoder_output_dim = encoder.get_output_dim()
+        self.induction = Induction(C, S, encoder_output_dim, iterations)
+        self.relation = Relation(C, encoder_output_dim, outsize)
 
     def forward(self, x):
         support_encoder, query_encoder = self.encoder(x)  # (k*c, 2*hidden_size)
@@ -122,6 +122,7 @@ class CNNEncoder(nn.Module):
                  ):
         super().__init__()
         self.num_support = num_classes * num_support_per_class
+        self.hidden_size = hidden_size
         self.embedding = nn.Embedding(
             vocab_size,
             embed_size,
@@ -153,25 +154,78 @@ class CNNEncoder(nn.Module):
         support, query = logits[0: self.num_support], logits[self.num_support:]
         return support, query
 
+    def get_output_dim(self):
+        return self.hidden_size
 
-class FewShotInductionCNN(nn.Module):
-    def __init__(self, C, S, vocab_size, embed_size,
+
+class CNNHEncoder(nn.Module):
+    def __init__(self,
+                 num_classes,
+                 num_support_per_class,
+                 vocab_size,
+                 embed_size,
                  num_filters,
                  kernel_sizes,
+                 num_layers,
                  dropout,
                  hidden_size,
-                 iterations, outsize, weights=None):
-        super(FewShotInductionCNN, self).__init__()
-        self.encoder = CNNEncoder(C, S, vocab_size, embed_size,
-                                  num_filters,
-                                  kernel_sizes,
-                                  dropout,
-                                  hidden_size, weights)
-        self.induction = Induction(C, S, hidden_size, iterations)
-        self.relation = Relation(C, hidden_size, outsize)
+                 weights,
+                 ):
+        super(CNNHEncoder, self).__init__()
+        self.hidden_size = hidden_size
 
     def forward(self, x):
-        support_encoder, query_encoder = self.encoder(x)  # (k*c, hidden_size)
-        class_vector = self.induction(support_encoder)
-        probs = self.relation(class_vector, query_encoder)
-        return probs
+        pass
+
+    def get_output_dim(self):
+        return self.hidden_size
+
+
+class LSTMEncoder(nn.Module):
+    def __init__(self, num_classes, num_support_per_class,
+                 vocab_size, embed_size, hidden_size, num_layers,
+                 weights):
+        super(LSTMEncoder, self).__init__()
+        self.num_support = num_classes * num_support_per_class
+        self.hidden_size = hidden_size
+
+        self.embedding = nn.Embedding(vocab_size, embed_size)
+        if weights is not None:
+            self.embedding.weight.data.copy_(torch.from_numpy(weights))
+
+        self.bilstm = nn.LSTM(embed_size, hidden_size, num_layers, bidirectional=True, batch_first=True)
+
+    def forward(self, x):
+        x = self.embedding(x)
+        outputs, _ = self.bilstm(x)
+        outputs = torch.mean(outputs, dim=1)
+        support, query = outputs[0: self.num_support], outputs[self.num_support:]
+        return support, query
+
+    def get_output_dim(self):
+        return self.hidden_size * 2
+
+
+class GRUEncoder(nn.Module):
+    def __init__(self, num_classes, num_support_per_class,
+                 vocab_size, embed_size, hidden_size, num_layers,
+                 weights):
+        super(GRUEncoder, self).__init__()
+        self.hidden_size = hidden_size
+        self.num_support = num_classes * num_support_per_class
+
+        self.embedding = nn.Embedding(vocab_size, embed_size)
+        if weights is not None:
+            self.embedding.weight.data.copy_(torch.from_numpy(weights))
+
+        self.bigru = nn.GRU(embed_size, hidden_size, num_layers, bidirectional=True, batch_first=True)
+
+    def forward(self, x):
+        x = self.embedding(x)
+        outputs, _ = self.bigru(x)
+        outputs = torch.mean(outputs, dim=1)
+        support, query = outputs[0: self.num_support], outputs[self.num_support:]
+        return support, query
+
+    def get_output_dim(self):
+        return self.hidden_size * 2

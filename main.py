@@ -11,6 +11,8 @@ from tensorboardX import SummaryWriter
 
 from tqdm import tqdm
 
+from utils import get_encoder
+
 
 def train(episode):
     model.train()
@@ -89,7 +91,7 @@ def main():
 
 if __name__ == "__main__":
     # config
-    config = OmegaConf.load("sysevr_config.yaml")
+    config = OmegaConf.load("sysevr_config_cnn.yaml")
 
     # seed
     seed = int(config['model']['seed'])
@@ -115,15 +117,13 @@ if __name__ == "__main__":
     # model & optimizer & criterion
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     support = int(config['model']['support'])
+    encoder = get_encoder(config["model"], len(vocabulary), weights)
     model = FewShotInduction(C=int(config['model']['class']),
                              S=support,
-                             vocab_size=len(vocabulary),
-                             embed_size=int(config['model']['embed_dim']),
-                             hidden_size=int(config['model']['hidden_dim']),
-                             d_a=int(config['model']['d_a']),
+                             encoder=encoder,
                              iterations=int(config['model']['iterations']),
                              outsize=int(config['model']['relation_dim']),
-                             weights=weights).to(device)
+                             ).to(device)
     optimizer = optim.Adam(model.parameters(), lr=float(config['model']['lr']))
     criterion = Criterion(way=int(config['model']['class']),
                           shot=int(config['model']['support']))

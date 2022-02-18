@@ -17,7 +17,7 @@ data:
   seed: 42
 
 model:
-  type: cnn
+  type: "lstm"
   seed: 42
   support: 100
   query: 100
@@ -26,19 +26,13 @@ model:
   early_stop: 70
   class: 2
   embed_dim: 64
-  num_filters: 128
-  kernel_sizes:
-    - 5
-    - 6
-    - 7
-    - 8
-  dropout: 0.1
-  hidden_dim: 128
+  hidden_dim: 64
+  num_layers: 1
   iterations: 10
   relation_dim: 100
-  lr: 0.002
-  log_path: "./log/sysevr_cnn"
-  model_path: "./log/sysevr_cnn/ckpt.pth"
+  lr: 1e-4
+  log_path: "./log/sysevr_lstm"
+  model_path: "./log/sysevr_lstm/ckpt.pth"
   episodes: 10000
 
 loader:

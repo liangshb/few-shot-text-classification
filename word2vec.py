@@ -39,7 +39,8 @@ def main():
     vocabulary = pickle.load(open(os.path.join(data_path, config['data']['vocabulary']), 'rb'))
     train_loader = pickle.load(open(os.path.join(data_path, config['data']['train_loader']), 'rb'))
     texts = get_texts(train_loader, vocabulary)
-    model = word2vec.Word2Vec(window=int(config['data']['window']), min_count=int(config['data']['min_count']), size=embed_dim)
+    model = word2vec.Word2Vec(window=int(config['data']['window']), min_count=int(config['data']['min_count']),
+                              size=embed_dim)
     model.build_vocab(texts)
     model.train(texts, total_examples=model.corpus_count, epochs=model.epochs)
     weights = get_weights(model, vocabulary, embed_dim)

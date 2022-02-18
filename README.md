@@ -4,27 +4,25 @@ Few-shot binary text classification with Induction Networks and Word2Vec weights
 
 ## Reference
 
-This is an PyTorch implementation of IJCNLP 2019 paper [Induction Networks for Few-Shot Text Classification](https://arxiv.org/abs/1902.10482v2).
+This is an PyTorch implementation of IJCNLP 2019
+paper [Induction Networks for Few-Shot Text Classification](https://arxiv.org/abs/1902.10482v2).
 
 ## Few-shot Classification
 
-* Few-shot classification is a task in which a classifier must be adapted 
-to accommodate new classes not seen in training, 
-given only a few examples of each of these new classes. 
-* There is a large labeled training set with a set of classes. 
-However, after training, the ultimate goal is to produce classifiers 
-on the test set (a disjoint set of new classes), 
-for which only a small labeled support set will be available. 
-* If the support set contains K labeled examples for each of the C unique classes, 
-the target few-shot problem is called __C-way K-shot problem__. 
-* Usually, the K is too small to train a supervised classification model. 
-Therefore meta-learning on the training set is necessary, 
-in order to extract transferable knowledge 
-that will help classify the test set more successfully.
+* Few-shot classification is a task in which a classifier must be adapted to accommodate new classes not seen in
+  training, given only a few examples of each of these new classes.
+* There is a large labeled training set with a set of classes. However, after training, the ultimate goal is to produce
+  classifiers on the test set (a disjoint set of new classes), for which only a small labeled support set will be
+  available.
+* If the support set contains K labeled examples for each of the C unique classes, the target few-shot problem is
+  called __C-way K-shot problem__.
+* Usually, the K is too small to train a supervised classification model. Therefore meta-learning on the training set is
+  necessary, in order to extract transferable knowledge that will help classify the test set more successfully.
 
 ## Prerequisites
 
 * Install the required packages by:
+
 ```
 pip install -r requirements.txt
 ```
@@ -36,16 +34,15 @@ pip install -r requirements.txt
 
 ## Dataset: Amazon Review Sentiment Classification (ARSC)
 
-This dataset comes from NAACL 2018 paper [Diverse Few-Shot Text Classification with Multiple Metrics](https://arxiv.org/abs/1805.07513v1).
+This dataset comes from NAACL 2018
+paper [Diverse Few-Shot Text Classification with Multiple Metrics](https://arxiv.org/abs/1805.07513v1).
 
-* The dataset comprises English reviews for 23 types of products
-on Amazon. 
-* For each product domain, there are three
-different binary classification tasks. These buckets then form
-23 x 3 = 69 tasks in total. 
-* 4 x 3 = 12 tasks from 4 test domains (Books, DVD, Electronics and Kitchen) are selected as test set, 
-and there are only 5 examples as support set for each labels in the test set. There other 19 domains are train domains.
- 
+* The dataset comprises English reviews for 23 types of products on Amazon.
+* For each product domain, there are three different binary classification tasks. These buckets then form 23 x 3 = 69
+  tasks in total.
+* 4 x 3 = 12 tasks from 4 test domains (Books, DVD, Electronics and Kitchen) are selected as test set, and there are
+  only 5 examples as support set for each labels in the test set. There other 19 domains are train domains.
+
 | Train Tasks | Dev Tasks|Test Tasks|
 | ------| ------|------|
 | 19 * 3 = 57 | 4 * 3 = 12 |4 * 3 = 12 |
@@ -70,11 +67,14 @@ python data.py
 * Pre-process all the texts data.
 * Extract vocabulary with train data. Vocabulary has size of 35913, with 0 as `<pad>` and 1 as `<unk>`.
 * Index all the texts with the vocabulary.
-* Training batch composition: 5 negative support data + 5 positive support data + 27 negative query data + 27 positive query data.
-In each batch, support data and query data are randomly divided.
-As this is a 2-way 5-shot problem, the 2-ways means the amount of labels (negative/positive) and the 5-shot means the size of support data with the same label.
-* Dev batch composition: 5 negative support data + 5 positive support data + 54 query data. There are 183 batches in total.
-* Test batch composition: 5 negative support data + 5 positive support data + 54 query data. There are 181 batches in total.
+* Training batch composition: 5 negative support data + 5 positive support data + 27 negative query data + 27 positive
+  query data. In each batch, support data and query data are randomly divided. As this is a 2-way 5-shot problem, the
+  2-ways means the amount of labels (negative/positive) and the 5-shot means the size of support data with the same
+  label.
+* Dev batch composition: 5 negative support data + 5 positive support data + 54 query data. There are 183 batches in
+  total.
+* Test batch composition: 5 negative support data + 5 positive support data + 54 query data. There are 181 batches in
+  total.
 * Above all, the batch size is always 64.
 
 ### Word2Vec
@@ -125,4 +125,5 @@ tensorboard --logdir=log/
 | ![dev_loss](pic/dev_acc.png) |__0.8452__ |__0.8563__ |
 
 ## Author
+
 Zhongyu Chen
