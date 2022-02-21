@@ -120,7 +120,60 @@ class CNNEncoder(nn.Module):
                  hidden_size,
                  weights
                  ):
-        super().__init__()
+        super(CNNEncoder, self).__init__()
+        self.num_support = num_classes * num_support_per_class
+        self.hidden_size = hidden_size
+        self.embedding = nn.Embedding(
+            vocab_size,
+            embed_size,
+            padding_idx=0
+        )
+        if weights is not None:
+            self.embedding.weight.data.copy_(torch.from_numpy(weights))
+        self.conv = nn.ModuleList(
+            [
+                nn.Conv1d(
+                    in_channels=embed_size,
+                    out_channels=num_filters,
+                    kernel_size=k,
+                )
+                for k in kernel_sizes
+            ]
+        )
+        self.dropout = nn.Dropout(dropout)
+        self.norm = nn.LayerNorm(num_filters * len(kernel_sizes))
+        self.fc = nn.Linear(
+            len(kernel_sizes) * num_filters, hidden_size
+        )
+
+    def forward(self, x):
+        x = self.embedding(x).transpose(1, 2)
+        x = [F.relu(conv(x)) for conv in self.conv]
+        x = [F.max_pool1d(c, c.size(-1)).squeeze(dim=-1) for c in x]
+        x = torch.cat(x, dim=1)
+        x = self.norm(x)
+        logits = self.fc(self.dropout(x))
+        support, query = logits[0: self.num_support], logits[self.num_support:]
+        return support, query
+
+    def get_output_dim(self):
+        return self.hidden_size
+
+
+class CNNHEncoder(nn.Module):
+    def __init__(self,
+                 num_classes,
+                 num_support_per_class,
+                 vocab_size,
+                 embed_size,
+                 num_filters,
+                 kernel_sizes,
+                 num_layers,
+                 dropout,
+                 hidden_size,
+                 weights,
+                 ):
+        super(CNNHEncoder, self).__init__()
         self.num_support = num_classes * num_support_per_class
         self.hidden_size = hidden_size
         self.embedding = nn.Embedding(
@@ -153,29 +206,6 @@ class CNNEncoder(nn.Module):
         logits = self.fc(self.dropout(x))
         support, query = logits[0: self.num_support], logits[self.num_support:]
         return support, query
-
-    def get_output_dim(self):
-        return self.hidden_size
-
-
-class CNNHEncoder(nn.Module):
-    def __init__(self,
-                 num_classes,
-                 num_support_per_class,
-                 vocab_size,
-                 embed_size,
-                 num_filters,
-                 kernel_sizes,
-                 num_layers,
-                 dropout,
-                 hidden_size,
-                 weights,
-                 ):
-        super(CNNHEncoder, self).__init__()
-        self.hidden_size = hidden_size
-
-    def forward(self, x):
-        pass
 
     def get_output_dim(self):
         return self.hidden_size

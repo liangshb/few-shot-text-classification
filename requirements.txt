@@ -1,8 +1,9 @@
 fastNLP==0.4.1
 gensim==3.8.0
 tensorboardX==1.8
-torch==1.1.0
+torch~=1.4.0
 numpy~=1.19.2
 omegaconf~=2.1.1
 datasets~=1.18.3
 tqdm~=4.62.3
+torchmetrics~=0.7.2

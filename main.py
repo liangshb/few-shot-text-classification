@@ -6,7 +6,7 @@ from torch import optim
 import random
 import numpy as np
 from model import FewShotInduction
-from criterion import Criterion
+from criterion import Criterion, Metrics
 from tensorboardX import SummaryWriter
 
 from tqdm import tqdm
@@ -31,40 +31,38 @@ def train(episode):
         print('Train Episode: {} Loss: {} Acc: {}'.format(episode, loss.item(), acc))
 
 
+def log_metrics(loss, results, prefix, episode=None):
+    writer.add_scalar(f"{prefix}_loss", loss, episode)
+    for key, value in results.items():
+        writer.add_scalar(f"{prefix}_{key}", value, episode)
+
+
 def dev(episode):
     model.eval()
-    correct = 0.
-    count = 0.
     for data, target in tqdm(dev_loader):
         data = data.to(device)
         target = target.to(device)
         predict = model(data)
-        _, acc = criterion(predict, target)
-        amount = len(target) - support * 2
-        correct += acc * amount
-        count += amount
-    acc = correct / count
-    writer.add_scalar('dev_acc', acc, episode)
-    print('Dev Episode: {} Acc: {}'.format(episode, acc))
-    return acc
+        loss, _ = criterion(predict, target)
+        dev_metrics.update(predict, target)
+    results = dev_metrics.get_metrics(reset=True)
+    log_metrics(loss, results, "dev", episode)
+    print('Dev Episode: {} Mcc: {} F1: {}'.format(episode, results["mcc"], results["f1"]))
+    return results["mcc"]
 
 
 def test():
     model.eval()
-    correct = 0.
-    count = 0.
     for data, target in tqdm(test_loader):
         data = data.to(device)
         target = target.to(device)
         predict = model(data)
-        _, acc = criterion(predict, target)
-        amount = len(target) - support * 2
-        correct += acc * amount
-        count += amount
-    acc = correct / count
-    writer.add_scalar('test_acc', acc)
-    print('Test Acc: {}'.format(acc))
-    return acc
+        loss, _ = criterion(predict, target)
+        test_metrics.update(predict, target)
+    results = test_metrics.get_metrics(reset=True)
+    log_metrics(loss, results, "test")
+    print('Test: {} Mcc: {} F1: {}'.format(results["mcc"], results["f1"]))
+    return results["mcc"]
 
 
 def main():
@@ -91,7 +89,7 @@ def main():
 
 if __name__ == "__main__":
     # config
-    config = OmegaConf.load("sysevr_config_cnn.yaml")
+    config = OmegaConf.load("sysevr_config.yaml")
 
     # seed
     seed = int(config['model']['seed'])
@@ -127,6 +125,10 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.parameters(), lr=float(config['model']['lr']))
     criterion = Criterion(way=int(config['model']['class']),
                           shot=int(config['model']['support']))
+    dev_metrics = Metrics(way=int(config['model']['class']),
+                          shot=int(config['model']['support']))
+    test_metrics = Metrics(way=int(config['model']['class']),
+                           shot=int(config['model']['support']))
 
     # writer
     os.makedirs(config['model']['log_path'], exist_ok=True)
