@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
+from modules.highway import Highway
+
 
 class Encoder(nn.Module):
     def __init__(self, num_classes, num_support_per_class,
@@ -193,6 +195,8 @@ class CNNHEncoder(nn.Module):
                 for k in kernel_sizes
             ]
         )
+        self.highway = Highway(num_filters * len(kernel_sizes), num_layers)
+        self.norm = nn.LayerNorm(num_filters * len(kernel_sizes))
         self.dropout = nn.Dropout(dropout)
         self.fc = nn.Linear(
             len(kernel_sizes) * num_filters, hidden_size
@@ -203,6 +207,8 @@ class CNNHEncoder(nn.Module):
         x = [F.relu(conv(x)) for conv in self.conv]
         x = [F.max_pool1d(c, c.size(-1)).squeeze(dim=-1) for c in x]
         x = torch.cat(x, dim=1)
+        x = self.highway(x)
+        x = self.norm(x)
         logits = self.fc(self.dropout(x))
         support, query = logits[0: self.num_support], logits[self.num_support:]
         return support, query

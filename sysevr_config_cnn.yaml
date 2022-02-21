@@ -26,14 +26,14 @@ model:
   early_stop: 70
   class: 2
   embed_dim: 64
-  num_filters: 128
+  num_filters: 50
   kernel_sizes:
     - 5
     - 6
     - 7
     - 8
   dropout: 0.1
-  hidden_dim: 128
+  hidden_dim: 50
   iterations: 10
   relation_dim: 100
   lr: 0.002

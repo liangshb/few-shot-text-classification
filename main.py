@@ -61,7 +61,7 @@ def test():
         test_metrics.update(predict, target)
     results = test_metrics.get_metrics(reset=True)
     log_metrics(loss, results, "test")
-    print('Test: {} Mcc: {} F1: {}'.format(results["mcc"], results["f1"]))
+    print('Test: Mcc: {} F1: {}'.format(results["mcc"], results["f1"]))
     return results["mcc"]
 
 
@@ -89,7 +89,7 @@ def main():
 
 if __name__ == "__main__":
     # config
-    config = OmegaConf.load("sysevr_config.yaml")
+    config = OmegaConf.load("sysevr_config_cnn_hw.yaml")
 
     # seed
     seed = int(config['model']['seed'])
