@@ -10,7 +10,6 @@ from criterion import Criterion, Metrics
 from tensorboardX import SummaryWriter
 
 from tqdm import tqdm
-
 from utils import get_encoder
 
 
@@ -31,36 +30,43 @@ def train(episode):
         print('Train Episode: {} Loss: {} Acc: {}'.format(episode, loss.item(), acc))
 
 
-def log_metrics(loss, results, prefix, episode=None):
-    writer.add_scalar(f"{prefix}_loss", loss, episode)
+def log_metrics(results, prefix, episode=None):
     for key, value in results.items():
         writer.add_scalar(f"{prefix}_{key}", value, episode)
 
 
 def dev(episode):
     model.eval()
+    loss_list = []
     for data, target in tqdm(dev_loader):
         data = data.to(device)
         target = target.to(device)
         predict = model(data)
         loss, _ = criterion(predict, target)
+        loss_list.append(loss.item())
         dev_metrics.update(predict, target)
     results = dev_metrics.get_metrics(reset=True)
-    log_metrics(loss, results, "dev", episode)
+    results["learning_rate"] = optimizer.param_groups[0]["lr"]
+    results["loss"] = torch.mean(torch.tensor(loss_list))
+    scheduler.step(results["mcc"])
+    log_metrics(results, "dev", episode)
     print('Dev Episode: {} Mcc: {} F1: {}'.format(episode, results["mcc"], results["f1"]))
     return results["mcc"]
 
 
 def test():
     model.eval()
+    loss_list = []
     for data, target in tqdm(test_loader):
         data = data.to(device)
         target = target.to(device)
         predict = model(data)
         loss, _ = criterion(predict, target)
+        loss_list.append(loss.item())
         test_metrics.update(predict, target)
     results = test_metrics.get_metrics(reset=True)
-    log_metrics(loss, results, "test")
+    results["loss"] = torch.mean(torch.tensor(loss_list))
+    log_metrics(results, "test")
     print('Test: Mcc: {} F1: {}'.format(results["mcc"], results["f1"]))
     return results["mcc"]
 
@@ -89,7 +95,7 @@ def main():
 
 if __name__ == "__main__":
     # config
-    config = OmegaConf.load("sysevr_config_cnn_hw.yaml")
+    config = OmegaConf.load("sysevr_config_cnn.yaml")
 
     # seed
     seed = int(config['model']['seed'])
@@ -123,6 +129,7 @@ if __name__ == "__main__":
                              outsize=int(config['model']['relation_dim']),
                              ).to(device)
     optimizer = optim.Adam(model.parameters(), lr=float(config['model']['lr']))
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, "max", patience=config.get("patience") or 2)
     criterion = Criterion(way=int(config['model']['class']),
                           shot=int(config['model']['support']))
     dev_metrics = Metrics(way=int(config['model']['class']),
