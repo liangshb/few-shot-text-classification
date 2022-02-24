@@ -2,8 +2,8 @@ data:
   path: "./data/sysevr_splited"
   train_domain:
     - "API_function_call"
-    # - "Arithmetic_expression"
-    # - "Pointer_usage"
+#    - "Arithmetic_expression"
+#    - "Pointer_usage"
   test_domain:
     - "Array_usage"
   train_loader: "train_loader.pkl"
@@ -22,11 +22,11 @@ model:
   support: 100
   query: 100
   log_interval: 10
-  dev_interval: 200
+  dev_interval: 50
   early_stop: 70
   class: 2
   embed_dim: 64
-  num_filters: 50
+  num_filters: 64
   kernel_sizes:
     - 5
     - 6
@@ -34,13 +34,16 @@ model:
     - 8
   num_layers: 1
   dropout: 0.1
-  hidden_dim: 50
+  hidden_dim: 64
   iterations: 10
   relation_dim: 100
   lr: 1e-4
+  min_lr: 1e-5
+  patience: 10
+  factor: 0.5
   log_path: "./log/sysevr_cnn_hw"
   model_path: "./log/sysevr_cnn_hw/ckpt.pth"
-  episodes: 10000
+  episodes: 150000
 
 loader:
   num_workers: 0

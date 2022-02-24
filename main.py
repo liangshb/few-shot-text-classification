@@ -129,7 +129,8 @@ if __name__ == "__main__":
                              outsize=int(config['model']['relation_dim']),
                              ).to(device)
     optimizer = optim.Adam(model.parameters(), lr=float(config['model']['lr']))
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, "max", patience=config.get("patience") or 2)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, "max", patience=config['model'].get("patience") or 2,
+                                                     factor=config['model'].get("factor") or 0.1)
     criterion = Criterion(way=int(config['model']['class']),
                           shot=int(config['model']['support']))
     dev_metrics = Metrics(way=int(config['model']['class']),

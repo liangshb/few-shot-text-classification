@@ -1,6 +1,6 @@
 import torch
 from torch.nn.modules.loss import _Loss
-from torchmetrics import Accuracy, Precision, Recall, F1Score, AUC, MatthewsCorrCoef, Specificity
+from torchmetrics import Accuracy, Precision, Recall, F1Score, MatthewsCorrCoef, Specificity
 
 
 class Criterion(_Loss):
@@ -25,7 +25,6 @@ class Metrics:
         self.precision = Precision(average=None, num_classes=2)
         self.recall = Recall(average=None, num_classes=2)
         self.f1 = F1Score(average=None, num_classes=2)
-        self.auc = AUC(reorder=True)
         self.mcc = MatthewsCorrCoef(num_classes=2)
         self.spec = Specificity(average=None, num_classes=2)
 
@@ -36,7 +35,6 @@ class Metrics:
         self.precision.update(preds, target)
         self.recall.update(preds, target)
         self.f1.update(preds, target)
-        self.auc.update(preds, target)
         self.mcc.update(preds, target)
         self.spec.update(preds, target)
 
@@ -46,7 +44,6 @@ class Metrics:
             "precision": self.precision.compute()[1],
             "recall": self.recall.compute()[1],
             "f1": self.f1.compute()[1],
-            "auc": self.auc.compute(),
             "mcc": self.mcc.compute(),
             "spec": self.spec.compute()[1],
         }
@@ -55,7 +52,6 @@ class Metrics:
             self.precision.reset()
             self.recall.reset()
             self.f1.reset()
-            self.auc.reset()
             self.mcc.reset()
             self.spec.reset()
         return results

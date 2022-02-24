@@ -169,7 +169,7 @@ def main():
 
 if __name__ == "__main__":
     # config
-    config = OmegaConf.load("sysevr_config.yaml")
+    config = OmegaConf.load("sysevr_config_cnn.yaml")
 
     # seed
     seed = config['data']['seed']

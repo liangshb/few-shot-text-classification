@@ -143,18 +143,17 @@ class CNNEncoder(nn.Module):
             ]
         )
         self.dropout = nn.Dropout(dropout)
-        self.norm = nn.LayerNorm(num_filters * len(kernel_sizes))
         self.fc = nn.Linear(
             len(kernel_sizes) * num_filters, hidden_size
         )
+        self.norm = nn.LayerNorm(hidden_size)
 
     def forward(self, x):
         x = self.embedding(x).transpose(1, 2)
         x = [F.relu(conv(x)) for conv in self.conv]
         x = [F.max_pool1d(c, c.size(-1)).squeeze(dim=-1) for c in x]
         x = torch.cat(x, dim=1)
-        x = self.norm(x)
-        logits = self.fc(self.dropout(x))
+        logits = self.norm(self.fc(x))
         support, query = logits[0: self.num_support], logits[self.num_support:]
         return support, query
 
@@ -196,11 +195,11 @@ class CNNHEncoder(nn.Module):
             ]
         )
         self.highway = Highway(num_filters * len(kernel_sizes), num_layers)
-        self.norm = nn.LayerNorm(num_filters * len(kernel_sizes))
         self.dropout = nn.Dropout(dropout)
         self.fc = nn.Linear(
             len(kernel_sizes) * num_filters, hidden_size
         )
+        self.norm = nn.LayerNorm(hidden_size)
 
     def forward(self, x):
         x = self.embedding(x).transpose(1, 2)
@@ -208,8 +207,7 @@ class CNNHEncoder(nn.Module):
         x = [F.max_pool1d(c, c.size(-1)).squeeze(dim=-1) for c in x]
         x = torch.cat(x, dim=1)
         x = self.highway(x)
-        x = self.norm(x)
-        logits = self.fc(self.dropout(x))
+        logits = self.norm(self.fc(x))
         support, query = logits[0: self.num_support], logits[self.num_support:]
         return support, query
 
