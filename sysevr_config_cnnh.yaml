@@ -27,7 +27,7 @@ model:
   early_stop: 100
   class: 2
   encoder:
-    type: "cnn"
+    type: "cnnh"
     embed_dim: 64
     num_filters: 50
     kernel_sizes:
@@ -35,7 +35,7 @@ model:
       - 6
       - 7
       - 8
-    output_dim: 50
+    projection_dim: 50
     do_layer_norm: True
   iterations: 10
   relation_dim: 100

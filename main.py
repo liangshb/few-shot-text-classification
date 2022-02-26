@@ -10,17 +10,17 @@ from criterion import Criterion, Metrics
 from tensorboardX import SummaryWriter
 
 from tqdm import tqdm
-
-from utils import get_encoder
+from models.utils import get_encoder
 
 
 def train(episode):
     model.train()
-    data, target = train_loader.get_batch()
+    data, length, target = train_loader.get_batch()
     data = data.to(device)
+    length = length.to(device)
     target = target.to(device)
     optimizer.zero_grad()
-    predict = model(data)
+    predict = model(data, length)
     loss, acc = criterion(predict, target)
     loss.backward()
     optimizer.step()
@@ -31,36 +31,43 @@ def train(episode):
         print('Train Episode: {} Loss: {} Acc: {}'.format(episode, loss.item(), acc))
 
 
-def log_metrics(loss, results, prefix, episode=None):
-    writer.add_scalar(f"{prefix}_loss", loss, episode)
+def log_metrics(results, prefix, episode=None):
     for key, value in results.items():
         writer.add_scalar(f"{prefix}_{key}", value, episode)
 
 
 def dev(episode):
     model.eval()
-    for data, target in tqdm(dev_loader):
+    loss_list = []
+    for data, length, target in tqdm(dev_loader):
         data = data.to(device)
+        length = length.to(device)
         target = target.to(device)
-        predict = model(data)
+        predict = model(data, length)
         loss, _ = criterion(predict, target)
         dev_metrics.update(predict, target)
+        loss_list.append(loss.item())
     results = dev_metrics.get_metrics(reset=True)
-    log_metrics(loss, results, "dev", episode)
+    results["loss"] = torch.mean(torch.tensor(loss_list))
+    log_metrics(results, "dev", episode)
     print('Dev Episode: {} Mcc: {} F1: {}'.format(episode, results["mcc"], results["f1"]))
     return results["mcc"]
 
 
 def test():
     model.eval()
-    for data, target in tqdm(test_loader):
+    loss_list = []
+    for data, length, target in tqdm(test_loader):
         data = data.to(device)
+        length = length.to(device)
         target = target.to(device)
-        predict = model(data)
+        predict = model(data, length)
         loss, _ = criterion(predict, target)
         test_metrics.update(predict, target)
+        loss_list.append(loss.item())
     results = test_metrics.get_metrics(reset=True)
-    log_metrics(loss, results, "test")
+    results["loss"] = torch.mean(torch.tensor(loss_list))
+    log_metrics(results, "test")
     print('Test: Mcc: {} F1: {}'.format(results["mcc"], results["f1"]))
     return results["mcc"]
 
@@ -89,7 +96,7 @@ def main():
 
 if __name__ == "__main__":
     # config
-    config = OmegaConf.load("sysevr_config_cnn_hw.yaml")
+    config = OmegaConf.load("sysevr_config_lstm_attn.yaml")
 
     # seed
     seed = int(config['model']['seed'])
@@ -115,7 +122,7 @@ if __name__ == "__main__":
     # model & optimizer & criterion
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     support = int(config['model']['support'])
-    encoder = get_encoder(config["model"], len(vocabulary), weights)
+    encoder = get_encoder(config["model"], len(vocabulary), weights, vocabulary.padding_idx)
     model = FewShotInduction(C=int(config['model']['class']),
                              S=support,
                              encoder=encoder,

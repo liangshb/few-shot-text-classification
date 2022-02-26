@@ -61,28 +61,32 @@ class TrainDataLoader:
         self.index = (self.index + 1) % len(self)
         return self.filenames[self.index]
 
-    def combine_batch(self, neg_data, neg_target, pos_data, pos_target):
+    def combine_batch(self, neg_data, neg_length, neg_target, pos_data, pos_length, pos_target):
         neg_data, pos_data = padding(neg_data, pos_data, pad_idx=self.pad_idx)
         # combine support data and query data
         support_data = torch.cat([neg_data[0:self.support], pos_data[0:self.support]], dim=0)
         query_data = torch.cat([neg_data[self.support:], pos_data[self.support:]], dim=0)
         data = torch.cat([support_data, query_data], dim=0)
+        # combine support data and query length
+        support_length = torch.cat([neg_length[0:self.support], pos_length[0:self.support]], dim=0)
+        query_length = torch.cat([neg_length[self.support:], pos_length[self.support:]], dim=0)
+        length = torch.cat([support_length, query_length], dim=0)
         # combine support target and query target
         support_target = torch.cat([neg_target[0:self.support], pos_target[0:self.support]], dim=0)
         query_target = torch.cat([neg_target[self.support:], pos_target[self.support:]], dim=0)
         target = torch.cat([support_target, query_target], dim=0)
-        return data, target
+        return data, length, target
 
     def get_batch(self):
         filename = self.get_filename()
         neg_idx = self.get_batch_idx(filename, 'neg')
         pos_idx = self.get_batch_idx(filename, 'pos')
-        neg_data, neg_target = self.loaders_ins[filename]['neg'][neg_idx]
-        pos_data, pos_target = self.loaders_ins[filename]['pos'][pos_idx]
+        neg_data, neg_length, neg_target = self.loaders_ins[filename]['neg'][neg_idx]
+        pos_data, pos_length, pos_target = self.loaders_ins[filename]['pos'][pos_idx]
         self.indices[filename]['neg'] += 1
         self.indices[filename]['pos'] += 1
         # imcomplete batch
         if min(len(neg_data), len(pos_data)) < self.support + self.query:
             return self.get_batch()
-        data, target = self.combine_batch(neg_data, neg_target, pos_data, pos_target)
-        return data, target
+        data, length, target = self.combine_batch(neg_data, neg_length, neg_target, pos_data, pos_length, pos_target)
+        return data, length, target

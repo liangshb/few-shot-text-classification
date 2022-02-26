@@ -27,20 +27,16 @@ model:
   early_stop: 100
   class: 2
   encoder:
-    type: "cnn"
+    type: "rnn_attn"
+    rnn_type: "gru"
     embed_dim: 64
-    num_filters: 50
-    kernel_sizes:
-      - 5
-      - 6
-      - 7
-      - 8
-    output_dim: 50
-    do_layer_norm: True
+    hidden_dim: 64
+    num_layers: 1
+    dropout: 0.0
   iterations: 10
   relation_dim: 100
   lr: 0.0001
-  log_path: "./log/sysevr_${model.encoder.type}"
+  log_path: "./log/sysevr_${model.encoder.type}_${model.encoder.rnn_type}"
   model_path: "${model.log_path}/ckpt.pth"
   episodes: 15000
 

@@ -1,4 +1,4 @@
-from gensim.models import word2vec
+from gensim.models import word2vec, fasttext
 import os
 import pickle
 import random
@@ -12,7 +12,7 @@ def get_texts(train_loader, vocabulary):
     for filename in train_loader.loaders:
         for value in train_loader.loaders[filename]:
             loader = list(train_loader.loaders[filename][value])
-            for data, _ in loader:
+            for data, _, _ in loader:
                 for text in data:
                     text = text.tolist()
                     for i in range(len(text)):
@@ -39,8 +39,12 @@ def main():
     vocabulary = pickle.load(open(os.path.join(data_path, config['data']['vocabulary']), 'rb'))
     train_loader = pickle.load(open(os.path.join(data_path, config['data']['train_loader']), 'rb'))
     texts = get_texts(train_loader, vocabulary)
-    model = word2vec.Word2Vec(window=int(config['data']['window']), min_count=int(config['data']['min_count']),
-                              size=embed_dim)
+    if config["data"]["pretrain"] == "word2vec":
+        model = word2vec.Word2Vec(window=int(config['data']['window']), min_count=int(config['data']['min_count']),
+                                  vector_size=embed_dim)
+    else:
+        model = fasttext.FastText(window=int(config['data']['window']), min_count=int(config['data']['min_count']),
+                                  vector_size=embed_dim)
     model.build_vocab(texts)
     model.train(texts, total_examples=model.corpus_count, epochs=model.epochs)
     weights = get_weights(model, vocabulary, embed_dim)

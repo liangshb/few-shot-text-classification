@@ -2,24 +2,22 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
-from modules.highway import Highway
-
 
 class Encoder(nn.Module):
-    def __init__(self, num_classes, num_support_per_class,
-                 vocab_size, embed_size, hidden_size,
-                 output_dim, weights):
+    def __init__(self, config, num_support, vocab_size, weights, pad_idx):
         super(Encoder, self).__init__()
-        self.num_support = num_classes * num_support_per_class
-        self.hidden_size = hidden_size
+        self.num_support = num_support
+        self.embed_dim = config["embed_dim"]
+        self.hidden_dim = config["hidden_dim"]
+        self.attn_dim = config["attn_dim"]
 
-        self.embedding = nn.Embedding(vocab_size, embed_size)
+        self.embedding = nn.Embedding(vocab_size, config["embed_dim"], padding_idx=pad_idx)
         if weights is not None:
             self.embedding.weight.data.copy_(torch.from_numpy(weights))
 
-        self.bilstm = nn.LSTM(embed_size, hidden_size, num_layers=1, bidirectional=True, batch_first=True)
-        self.fc1 = nn.Linear(2 * hidden_size, output_dim)
-        self.fc2 = nn.Linear(output_dim, output_dim)
+        self.bilstm = nn.LSTM(self.embed_dim, self.hidden_dim, num_layers=1, bidirectional=True, batch_first=True)
+        self.fc1 = nn.Linear(2 * self.hidden_dim, self.attn_dim)
+        self.fc2 = nn.Linear(self.attn_dim, self.attn_dim)
 
     def attention(self, x):
         weights = torch.tanh(self.fc1(x))
@@ -33,13 +31,13 @@ class Encoder(nn.Module):
         return avg_sentence_embeddings
 
     def get_output_dim(self):
-        return self.hidden_size * 2
+        return self.hidden_dim * 2
 
-    def forward(self, x, hidden=None):
+    def forward(self, x, mask=None, hidden=None):
         batch_size, _ = x.shape
         if hidden is None:
-            h = x.data.new(2, batch_size, self.hidden_size).fill_(0).float()
-            c = x.data.new(2, batch_size, self.hidden_size).fill_(0).float()
+            h = x.data.new(2, batch_size, self.hidden_dim).fill_(0).float()
+            c = x.data.new(2, batch_size, self.hidden_dim).fill_(0).float()
         else:
             h, c = hidden
         x = self.embedding(x)
@@ -103,165 +101,8 @@ class FewShotInduction(nn.Module):
         self.induction = Induction(C, S, encoder_output_dim, iterations)
         self.relation = Relation(C, encoder_output_dim, outsize)
 
-    def forward(self, x):
-        support_encoder, query_encoder = self.encoder(x)  # (k*c, 2*hidden_size)
+    def forward(self, x, mask=None):
+        support_encoder, query_encoder = self.encoder(x, mask)  # (k*c, 2*hidden_size)
         class_vector = self.induction(support_encoder)
         probs = self.relation(class_vector, query_encoder)
         return probs
-
-
-class CNNEncoder(nn.Module):
-    def __init__(self,
-                 num_classes,
-                 num_support_per_class,
-                 vocab_size,
-                 embed_size,
-                 num_filters,
-                 kernel_sizes,
-                 dropout,
-                 hidden_size,
-                 weights
-                 ):
-        super(CNNEncoder, self).__init__()
-        self.num_support = num_classes * num_support_per_class
-        self.hidden_size = hidden_size
-        self.embedding = nn.Embedding(
-            vocab_size,
-            embed_size,
-            padding_idx=0
-        )
-        if weights is not None:
-            self.embedding.weight.data.copy_(torch.from_numpy(weights))
-        self.conv = nn.ModuleList(
-            [
-                nn.Conv1d(
-                    in_channels=embed_size,
-                    out_channels=num_filters,
-                    kernel_size=k,
-                )
-                for k in kernel_sizes
-            ]
-        )
-        self.dropout = nn.Dropout(dropout)
-        self.norm = nn.LayerNorm(num_filters * len(kernel_sizes))
-        self.fc = nn.Linear(
-            len(kernel_sizes) * num_filters, hidden_size
-        )
-
-    def forward(self, x):
-        x = self.embedding(x).transpose(1, 2)
-        x = [F.relu(conv(x)) for conv in self.conv]
-        x = [F.max_pool1d(c, c.size(-1)).squeeze(dim=-1) for c in x]
-        x = torch.cat(x, dim=1)
-        x = self.norm(x)
-        logits = self.fc(self.dropout(x))
-        support, query = logits[0: self.num_support], logits[self.num_support:]
-        return support, query
-
-    def get_output_dim(self):
-        return self.hidden_size
-
-
-class CNNHEncoder(nn.Module):
-    def __init__(self,
-                 num_classes,
-                 num_support_per_class,
-                 vocab_size,
-                 embed_size,
-                 num_filters,
-                 kernel_sizes,
-                 num_layers,
-                 dropout,
-                 hidden_size,
-                 weights,
-                 ):
-        super(CNNHEncoder, self).__init__()
-        self.num_support = num_classes * num_support_per_class
-        self.hidden_size = hidden_size
-        self.embedding = nn.Embedding(
-            vocab_size,
-            embed_size,
-            padding_idx=0
-        )
-        if weights is not None:
-            self.embedding.weight.data.copy_(torch.from_numpy(weights))
-        self.conv = nn.ModuleList(
-            [
-                nn.Conv1d(
-                    in_channels=embed_size,
-                    out_channels=num_filters,
-                    kernel_size=k,
-                )
-                for k in kernel_sizes
-            ]
-        )
-        self.highway = Highway(num_filters * len(kernel_sizes), num_layers)
-        self.norm = nn.LayerNorm(num_filters * len(kernel_sizes))
-        self.dropout = nn.Dropout(dropout)
-        self.fc = nn.Linear(
-            len(kernel_sizes) * num_filters, hidden_size
-        )
-
-    def forward(self, x):
-        x = self.embedding(x).transpose(1, 2)
-        x = [F.relu(conv(x)) for conv in self.conv]
-        x = [F.max_pool1d(c, c.size(-1)).squeeze(dim=-1) for c in x]
-        x = torch.cat(x, dim=1)
-        x = self.highway(x)
-        x = self.norm(x)
-        logits = self.fc(self.dropout(x))
-        support, query = logits[0: self.num_support], logits[self.num_support:]
-        return support, query
-
-    def get_output_dim(self):
-        return self.hidden_size
-
-
-class LSTMEncoder(nn.Module):
-    def __init__(self, num_classes, num_support_per_class,
-                 vocab_size, embed_size, hidden_size, num_layers,
-                 weights):
-        super(LSTMEncoder, self).__init__()
-        self.num_support = num_classes * num_support_per_class
-        self.hidden_size = hidden_size
-
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        if weights is not None:
-            self.embedding.weight.data.copy_(torch.from_numpy(weights))
-
-        self.bilstm = nn.LSTM(embed_size, hidden_size, num_layers, bidirectional=True, batch_first=True)
-
-    def forward(self, x):
-        x = self.embedding(x)
-        outputs, _ = self.bilstm(x)
-        outputs = torch.mean(outputs, dim=1)
-        support, query = outputs[0: self.num_support], outputs[self.num_support:]
-        return support, query
-
-    def get_output_dim(self):
-        return self.hidden_size * 2
-
-
-class GRUEncoder(nn.Module):
-    def __init__(self, num_classes, num_support_per_class,
-                 vocab_size, embed_size, hidden_size, num_layers,
-                 weights):
-        super(GRUEncoder, self).__init__()
-        self.hidden_size = hidden_size
-        self.num_support = num_classes * num_support_per_class
-
-        self.embedding = nn.Embedding(vocab_size, embed_size)
-        if weights is not None:
-            self.embedding.weight.data.copy_(torch.from_numpy(weights))
-
-        self.bigru = nn.GRU(embed_size, hidden_size, num_layers, bidirectional=True, batch_first=True)
-
-    def forward(self, x):
-        x = self.embedding(x)
-        outputs, _ = self.bigru(x)
-        outputs = torch.mean(outputs, dim=1)
-        support, query = outputs[0: self.num_support], outputs[self.num_support:]
-        return support, query
-
-    def get_output_dim(self):
-        return self.hidden_size * 2

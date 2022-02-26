@@ -1,39 +1,44 @@
 data:
-  path: "./data/sysevr_splited"
+  path: "./data/sysevr_splited_len"
   train_domain:
     - "API_function_call"
-    # - "Arithmetic_expression"
-    # - "Pointer_usage"
+  #    - "Arithmetic_expression"
+  #    - "Pointer_usage"
   test_domain:
     - "Array_usage"
-  train_loader: "train_loader.pkl"
-  dev_loader: "dev_loader.pkl"
-  test_loader: "test_loader.pkl"
-  vocabulary: "vocabulary.pkl"
-  weights: "weights.pkl"
+  prefix: "afc"
+  pretrain: "word2vec"
+  train_loader: "${data.prefix}_train_loader.pkl"
+  dev_loader: "${data.prefix}_dev_loader.pkl"
+  test_loader: "${data.prefix}_test_loader.pkl"
+  vocabulary: "${data.prefix}_vocabulary.pkl"
+  weights: "${data.prefix}_${data.pretrain}_weights.pkl"
   window: 64
   min_count: 1
   min_freq: 1
   seed: 42
 
 model:
-  type: "lstm"
   seed: 42
   support: 100
   query: 100
   log_interval: 10
-  dev_interval: 200
-  early_stop: 70
+  dev_interval: 50
+  early_stop: 100
   class: 2
-  embed_dim: 64
-  hidden_dim: 64
-  num_layers: 1
+  encoder:
+    type: "rnn"
+    rnn_type: "lstm"
+    embed_dim: 64
+    hidden_dim: 64
+    num_layers: 1
+    dropout: 0.0
   iterations: 10
   relation_dim: 100
-  lr: 1e-4
-  log_path: "./log/sysevr_lstm"
-  model_path: "./log/sysevr_lstm/ckpt.pth"
-  episodes: 10000
+  lr: 0.0001
+  log_path: "./log/sysevr_${model.encoder.type}_${model.encoder.rnn_type}"
+  model_path: "${model.log_path}/ckpt.pth"
+  episodes: 15000
 
 loader:
   num_workers: 0

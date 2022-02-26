@@ -1,6 +1,5 @@
 import torch
-from model import Encoder, CNNEncoder, LSTMEncoder, GRUEncoder, CNNHEncoder
-from omegaconf import DictConfig
+from torch.nn.utils.rnn import pad_sequence
 
 
 def padding(data1, data2, pad_idx=0):
@@ -21,63 +20,15 @@ def batch_padding(data, pad_idx=0):
     return torch.tensor(data)
 
 
-def get_encoder(conf: DictConfig, vocab_size, weights):
-    num_classes = conf["class"]
-    num_support = conf["support"]
-    embed_dim = conf["embed_dim"]
-    hidden_dim = conf["hidden_dim"]
-    d_a = conf.get("d_a")
-    num_filters = conf.get("num_filters")
-    kernel_sizes = conf.get("kernel_sizes")
-    dropout = conf.get("dropout")
-    num_layers = conf.get("num_layers")
-    model_type = conf.get("type")
-    if model_type == "cnn":
-        encoder = CNNEncoder(
-            num_classes,
-            num_support,
-            vocab_size,
-            embed_dim,
-            num_filters,
-            kernel_sizes,
-            dropout,
-            hidden_dim,
-            weights
-        )
-    elif model_type == "cnnh":
-        encoder = CNNHEncoder(
-            num_classes,
-            num_support,
-            vocab_size,
-            embed_dim,
-            num_filters,
-            kernel_sizes,
-            num_layers,
-            dropout,
-            hidden_dim,
-            weights
-        )
-    elif model_type == "lstm":
-        encoder = LSTMEncoder(
-            num_classes,
-            num_support,
-            vocab_size,
-            embed_dim,
-            hidden_dim,
-            num_layers,
-            weights
-        )
-    elif model_type == "gru":
-        encoder = GRUEncoder(
-            num_classes,
-            num_support,
-            vocab_size,
-            embed_dim,
-            hidden_dim,
-            num_layers,
-            weights
-        )
-    else:
-        encoder = Encoder(num_classes, num_support, vocab_size, embed_dim, hidden_dim, d_a, weights)
-
-    return encoder
+def collate_fn(batch, pad_idx=0):
+    data_list = []
+    length_list = []
+    target_list = []
+    for data, length, target in batch:
+        data_list.append(torch.tensor(data))
+        length_list.append(length)
+        target_list.append(target)
+    data = pad_sequence(data_list, batch_first=True, padding_value=pad_idx)
+    length = torch.tensor(length_list)
+    target = torch.tensor(target_list)
+    return data, length, target
