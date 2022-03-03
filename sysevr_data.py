@@ -113,16 +113,23 @@ def get_train_loader(train_data, support, query, pad_idx):
 
 
 def random_select(domain, support):
-    neg_indices = list(range(len(domain['neg']['data'])))
-    pos_indices = list(range(len(domain['pos']['data'])))
-    neg_selected_indices = sample(neg_indices, support)
-    pos_selected_indices = sample(pos_indices, support)
-    neg_support_data = [domain['neg']['data'].pop(index) for index in neg_selected_indices]
-    pos_support_data = [domain['pos']['data'].pop(index) for index in pos_selected_indices]
-    neg_support_length = [domain['neg']['length'].pop(index) for index in neg_selected_indices]
-    pos_support_length = [domain['pos']['length'].pop(index) for index in pos_selected_indices]
-    neg_support_target = [domain['neg']['target'].pop(index) for index in neg_selected_indices]
-    pos_support_target = [domain['pos']['target'].pop(index) for index in pos_selected_indices]
+    neg_support_data = []
+    pos_support_data = []
+    neg_support_length = []
+    pos_support_length = []
+    neg_support_target = []
+    pos_support_target = []
+    for _ in range(support):
+        neg_indices = range(len(domain['neg']['data']))
+        pos_indices = range(len(domain['pos']['data']))
+        neg_selected_index = random.choice(neg_indices)
+        pos_selected_index = random.choice(pos_indices)
+        neg_support_data.append(domain["neg"]["data"].pop(neg_selected_index))
+        pos_support_data.append(domain["pos"]["data"].pop(pos_selected_index))
+        neg_support_length.append(domain["neg"]["length"].pop(neg_selected_index))
+        pos_support_length.append(domain['pos']['length'].pop(pos_selected_index))
+        neg_support_target.append(domain['neg']['target'].pop(neg_selected_index))
+        pos_support_target.append(domain['pos']['target'].pop(pos_selected_index))
     return neg_support_data + pos_support_data, neg_support_length + pos_support_length, neg_support_target + pos_support_target
 
 
@@ -160,35 +167,48 @@ def get_test_loader(full_data, support, query, pad_idx):
 
 def main():
     data_path = config['data']['path']
+    vocabulary_path = os.path.join(config['data']['path'], config['data']['vocabulary'])
+    train_loader_path = os.path.join(config['data']['path'], config['data']['train_loader'])
+    dev_loader_path = os.path.join(config['data']['path'], config['data']['dev_loader'])
+    test_loader_path = os.path.join(config['data']['path'], config['data']['test_loader'])
     train_domains, test_domains = config['data']['train_domain'], config['data']['test_domain']
 
     train_data = get_train_data(data_path, train_domains)
     dev_data, test_data = get_test_data(data_path, test_domains)
 
-    vocabulary = get_vocabulary(train_data, min_freq=config['data']['min_freq'])
+    if os.path.exists(vocabulary_path):
+        print("Loading vocabulary")
+        vocabulary = pickle.load(open(vocabulary_path, "rb"))
+    else:
+        vocabulary = get_vocabulary(train_data, min_freq=config['data']['min_freq'])
+        pickle.dump(vocabulary, open(vocabulary_path, 'wb'))
     pad_idx = vocabulary.padding_idx
-    pickle.dump(vocabulary, open(os.path.join(config['data']['path'], config['data']['vocabulary']), 'wb'))
-
-    train_data = idx_all_data(train_data, vocabulary)
-    dev_data = idx_all_data(dev_data, vocabulary)
-    test_data = idx_all_data(test_data, vocabulary)
-    # print(dev_data['books.t2.dev']['neg']['support_data'])
-    # print(dev_data['books.t2.dev']['neg']['support_target'])
 
     support = int(config['model']['support'])
     query = int(config['model']['query'])
-    train_loader = get_train_loader(train_data, support, query, pad_idx)
-    dev_loader = get_test_loader(dev_data, support, query, pad_idx)
-    test_loader = get_test_loader(test_data, support, query, pad_idx)
-
-    pickle.dump(train_loader, open(os.path.join(config['data']['path'], config['data']['train_loader']), 'wb'))
-    pickle.dump(dev_loader, open(os.path.join(config['data']['path'], config['data']['dev_loader']), 'wb'))
-    pickle.dump(test_loader, open(os.path.join(config['data']['path'], config['data']['test_loader']), 'wb'))
+    if not os.path.exists(train_loader_path):
+        train_data = idx_all_data(train_data, vocabulary)
+        train_loader = get_train_loader(train_data, support, query, pad_idx)
+        pickle.dump(train_loader, open(train_loader_path, 'wb'))
+    else:
+        print("Train loader exists")
+    if not os.path.exists(dev_loader_path):
+        dev_data = idx_all_data(dev_data, vocabulary)
+        dev_loader = get_test_loader(dev_data, support, query, pad_idx)
+        pickle.dump(dev_loader, open(dev_loader_path, 'wb'))
+    else:
+        print("Dev loader exists")
+    if not os.path.exists(test_loader_path):
+        test_data = idx_all_data(test_data, vocabulary)
+        test_loader = get_test_loader(test_data, support, query, pad_idx)
+        pickle.dump(test_loader, open(test_loader_path, 'wb'))
+    else:
+        print("Test loader exists")
 
 
 if __name__ == "__main__":
     # config
-    config = OmegaConf.load("sysevr_config.yaml")
+    config = OmegaConf.load("sysevr_config_cnn.yaml")
 
     # seed
     seed = config['data']['seed']

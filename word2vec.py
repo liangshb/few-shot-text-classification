@@ -35,24 +35,28 @@ def get_weights(model, vocabulary, embed_dim):
 
 def main():
     data_path = config['data']['path']
-    embed_dim = int(config['model']['embed_dim'])
-    vocabulary = pickle.load(open(os.path.join(data_path, config['data']['vocabulary']), 'rb'))
-    train_loader = pickle.load(open(os.path.join(data_path, config['data']['train_loader']), 'rb'))
-    texts = get_texts(train_loader, vocabulary)
-    if config["data"]["pretrain"] == "word2vec":
-        model = word2vec.Word2Vec(window=int(config['data']['window']), min_count=int(config['data']['min_count']),
-                                  vector_size=embed_dim)
+    weights_path = os.path.join(data_path, config["data"]["weights"])
+    if not os.path.exists(weights_path):
+        embed_dim = int(config['model']['encoder']['embed_dim'])
+        vocabulary = pickle.load(open(os.path.join(data_path, config['data']['vocabulary']), 'rb'))
+        train_loader = pickle.load(open(os.path.join(data_path, config['data']['train_loader']), 'rb'))
+        texts = get_texts(train_loader, vocabulary)
+        if config["data"]["pretrain"] == "word2vec":
+            model = word2vec.Word2Vec(window=int(config['data']['window']), min_count=int(config['data']['min_count']),
+                                      vector_size=embed_dim)
+        else:
+            model = fasttext.FastText(window=int(config['data']['window']), min_count=int(config['data']['min_count']),
+                                      vector_size=embed_dim)
+        model.build_vocab(texts)
+        model.train(texts, total_examples=model.corpus_count, epochs=model.epochs)
+        weights = get_weights(model, vocabulary, embed_dim)
+        pickle.dump(weights, open(os.path.join(data_path, config['data']['weights']), 'wb'))
     else:
-        model = fasttext.FastText(window=int(config['data']['window']), min_count=int(config['data']['min_count']),
-                                  vector_size=embed_dim)
-    model.build_vocab(texts)
-    model.train(texts, total_examples=model.corpus_count, epochs=model.epochs)
-    weights = get_weights(model, vocabulary, embed_dim)
-    pickle.dump(weights, open(os.path.join(data_path, config['data']['weights']), 'wb'))
+        print("Weights exists")
 
 
 if __name__ == '__main__':
-    config = OmegaConf.load("sysevr_config.yaml")
+    config = OmegaConf.load("sysevr_config_cnn.yaml")
 
     # seed
     seed = int(config['data']['seed'])
