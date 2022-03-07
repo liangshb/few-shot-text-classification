@@ -9,7 +9,7 @@ data:
   source: "afc"
   target: "au"
   pretrain: "word2vec"
-  save_path: "${data.source}_${data.target}_${model.support}_${model.query}"
+  save_path: "${data.source}_${data.target}_${model.support}_${model.query}_${data.seed}"
   train_loader: "${data.save_path}/train_loader.pkl"
   vocabulary: "${data.save_path}/vocabulary.pkl"
   weights: "${data.save_path}/${data.pretrain}_weights.pkl"
@@ -21,8 +21,8 @@ data:
   seed: 42
 
 model:
-  seed: 42
-  support: 100
+  seed: 43
+  support: 200
   query: 100
   log_interval: 10
   dev_interval: 100
