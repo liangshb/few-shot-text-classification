@@ -167,6 +167,8 @@ def get_test_loader(full_data, support, query, pad_idx):
 
 def main():
     data_path = config['data']['path']
+    save_path = os.path.join(data_path, config["data"]["save_path"])
+    os.makedirs(save_path, exist_ok=True)
     vocabulary_path = os.path.join(config['data']['path'], config['data']['vocabulary'])
     train_loader_path = os.path.join(config['data']['path'], config['data']['train_loader'])
     dev_loader_path = os.path.join(config['data']['path'], config['data']['dev_loader'])

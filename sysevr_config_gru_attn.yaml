@@ -21,7 +21,7 @@ data:
 
 model:
   seed: 42
-  support: 50
+  support: 200
   query: 50
   log_interval: 10
   dev_interval: 50
