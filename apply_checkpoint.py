@@ -1,3 +1,4 @@
+import argparse
 from omegaconf import OmegaConf
 import pickle
 import os
@@ -30,14 +31,20 @@ def train_test():
 
 
 def main():
-    # state_dict = torch.load(config["model"]["model_path"])
-    state_dict = torch.load("./log/sysevr_cnn/ckpt.pth")
+    state_dict = torch.load(config["model"]["model_path"])
     model.load_state_dict(state_dict)
     train_test()
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("sysevr_config_cnn.yaml")
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("conf_path", type=str)
+    arg_parser.add_argument("dev_path", type=str)
+    args = arg_parser.parse_args()
+    conf_path = args.conf_path
+    dev_path = args.dev_path
+
+    config = OmegaConf.load(conf_path)
     # seed
     seed = int(config['model']['seed'])
     random.seed(seed)
@@ -52,7 +59,7 @@ if __name__ == "__main__":
     # data loaders
     train_loader = pickle.load(open(os.path.join(config['data']['path'], config['data']['train_loader']), 'rb'))
     dev_loader = pickle.load(open(os.path.join(config['data']['path'], config['data']['dev_loader']), 'rb'))
-    test_loader = pickle.load(open(os.path.join(config['data']['path'], config['data']['test_loader']), 'rb'))
+    test_loader = pickle.load(open(dev_path, 'rb'))
 
     vocabulary = pickle.load(open(os.path.join(config['data']['path'], config['data']['vocabulary']), 'rb'))
 

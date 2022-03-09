@@ -56,7 +56,7 @@ def main():
 
 
 if __name__ == '__main__':
-    config = OmegaConf.load("sysevr_config_cnn.yaml")
+    config = OmegaConf.load("sysevr_config_lstm_attn.yaml")
 
     # seed
     seed = int(config['data']['seed'])
