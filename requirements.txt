@@ -9,3 +9,5 @@ torchmetrics~=0.7.2
 datasets~=1.18.3
 allennlp~=2.9.0
 flask~=2.0.3
+tensorboard~=2.8.0
+pandas~=1.4.1

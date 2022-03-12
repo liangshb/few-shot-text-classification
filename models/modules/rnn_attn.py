@@ -36,7 +36,7 @@ class RNN(Seq2SeqEncoder):
         return self._is_bidirectional
 
     def forward(
-        self, inputs: torch.Tensor, mask: torch.BoolTensor, hidden_state: torch.Tensor = None
+            self, inputs: torch.Tensor, mask: torch.BoolTensor, hidden_state: torch.Tensor = None
     ) -> torch.Tensor:
         if mask is None:
             res = self._module(inputs, hidden_state)[0]

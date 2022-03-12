@@ -21,7 +21,12 @@ def main():
     f1 = dev_f1[index]
     mcc = dev_mcc[index]
     spec = dev_spec[index]
-    print(f"acc: {accuracy}, prec: {precision}, recall: {recall}, f1: {f1}, mcc: {mcc}, spec: {spec}")
+    print(f"fpr: {1 - spec}")
+    print(f"fnr: {1 - recall}")
+    print(f"acc: {accuracy}")
+    print(f"pre: {precision}")
+    print(f"f1: {f1}")
+    print(f"mcc: {mcc}")
 
 
 if __name__ == "__main__":
